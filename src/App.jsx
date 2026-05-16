@@ -3,8 +3,15 @@ import TranslatorInput from './components/TranslatorInput';
 import TranslationCard from './components/TranslationCard';
 import HistoryPanel from './components/HistoryPanel';
 import ModeToggle from './components/ModeToggle';
+import PhrasesPanel from './components/PhrasesPanel';
 import { translateToArabic, translateFromArabic } from './services/claudeApi';
 import { useHistory } from './hooks/useHistory';
+
+// Tabs for the bottom section
+const TABS = [
+  { id: 'frases', label: '📚 Frases' },
+  { id: 'historial', label: '🕓 Historial' },
+];
 
 export default function App() {
   const [mode, setMode] = useState('translate');
@@ -13,7 +20,8 @@ export default function App() {
   const [currentResult, setCurrentResult] = useState(null);
   const [currentPhrase, setCurrentPhrase] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('frases');
+  const [mobileBottomOpen, setMobileBottomOpen] = useState(false);
 
   const { history, addEntry, toggleFavorite, removeEntry, clearHistory } = useHistory();
 
@@ -35,6 +43,23 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Tap a pre-loaded phrase from PhrasesPanel → show its card directly (no API call)
+  const handleSelectPreloadedPhrase = (phrase) => {
+    setMode('translate');
+    setCurrentPhrase(phrase.es);
+    setCurrentResult({
+      arabic: phrase.arabic,
+      phonetic: phrase.phonetic,
+      literal: phrase.es,
+      tips: phrase.tip || null,
+      category: 'other',
+    });
+    setIsSaved(false);
+    setError(null);
+    // Scroll to top on mobile
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSave = () => {
@@ -66,8 +91,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-darkbg text-white flex flex-col lg:flex-row">
-      {/* Main column */}
-      <main className="flex-1 flex flex-col max-w-lg mx-auto w-full lg:max-w-none lg:mx-0 px-4 pb-8 pt-6 overflow-y-auto">
+      {/* ── Main column ── */}
+      <main className="flex-1 flex flex-col max-w-lg mx-auto w-full lg:max-w-none lg:mx-0 px-4 pb-4 pt-6 lg:overflow-y-auto">
+
         {/* Header */}
         <header className="flex items-center justify-between mb-6">
           <div>
@@ -80,14 +106,14 @@ export default function App() {
             </p>
           </div>
 
-          {/* History toggle (mobile) */}
+          {/* Mobile: toggle bottom panel */}
           <button
-            onClick={() => setHistoryOpen(true)}
+            onClick={() => setMobileBottomOpen(v => !v)}
             className="relative flex items-center gap-2 px-3 py-2 bg-surface border border-white/10 rounded-full text-sm text-gray-400 hover:text-white transition-colors lg:hidden"
           >
-            <span>📚</span>
-            <span>Historial</span>
-            {history.length > 0 && (
+            <span>{mobileBottomOpen ? '✕' : '📚'}</span>
+            <span>{mobileBottomOpen ? 'Cerrar' : 'Frases'}</span>
+            {history.length > 0 && !mobileBottomOpen && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-gold rounded-full text-[10px] text-darkbg font-bold flex items-center justify-center">
                 {history.length > 99 ? '99+' : history.length}
               </span>
@@ -124,7 +150,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Result */}
+        {/* Translation result */}
         {!isLoading && currentResult && (
           <div className="mt-6">
             <TranslationCard
@@ -136,32 +162,101 @@ export default function App() {
             />
           </div>
         )}
+
+        {/* Mobile: inline bottom panel (frases + historial) */}
+        {mobileBottomOpen && (
+          <div className="mt-6 lg:hidden">
+            <BottomPanel
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              history={history}
+              onSelectPhrase={handleSelectPreloadedPhrase}
+              onSelectHistory={(e) => { handleSelectHistory(e); setMobileBottomOpen(false); }}
+              onToggleFavorite={toggleFavorite}
+              onRemove={removeEntry}
+              onClear={clearHistory}
+            />
+          </div>
+        )}
+
+        <div className="pb-8" />
       </main>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:w-80 xl:w-96 flex-col border-l border-white/10 h-screen sticky top-0">
-        <HistoryPanel
-          history={history}
-          onSelect={handleSelectHistory}
-          onToggleFavorite={toggleFavorite}
-          onRemove={removeEntry}
-          onClear={clearHistory}
-          isOpen={true}
-          onClose={() => {}}
-        />
-      </aside>
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden lg:flex lg:w-96 xl:w-[420px] flex-col border-l border-white/10 h-screen sticky top-0">
+        <div className="flex border-b border-white/10 flex-shrink-0">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-3 text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'text-gold border-b-2 border-gold'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      {/* Mobile history bottom sheet */}
-      <div className="lg:hidden">
-        <HistoryPanel
-          history={history}
-          onSelect={handleSelectHistory}
-          onToggleFavorite={toggleFavorite}
-          onRemove={removeEntry}
-          onClear={clearHistory}
-          isOpen={historyOpen}
-          onClose={() => setHistoryOpen(false)}
-        />
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'frases' ? (
+            <div className="p-4">
+              <PhrasesPanel onSelectPhrase={handleSelectPreloadedPhrase} />
+            </div>
+          ) : (
+            <HistoryPanel
+              history={history}
+              onSelect={handleSelectHistory}
+              onToggleFavorite={toggleFavorite}
+              onRemove={removeEntry}
+              onClear={clearHistory}
+              isOpen={true}
+              onClose={() => {}}
+              embedded
+            />
+          )}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function BottomPanel({ activeTab, setActiveTab, history, onSelectPhrase, onSelectHistory, onToggleFavorite, onRemove, onClear }) {
+  return (
+    <div className="bg-surface border border-white/10 rounded-3xl overflow-hidden">
+      <div className="flex border-b border-white/10">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-3 text-sm font-medium transition-all ${
+              activeTab === tab.id
+                ? 'text-gold border-b-2 border-gold'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="max-h-[70vh] overflow-y-auto p-4">
+        {activeTab === 'frases' ? (
+          <PhrasesPanel onSelectPhrase={onSelectPhrase} />
+        ) : (
+          <HistoryPanel
+            history={history}
+            onSelect={onSelectHistory}
+            onToggleFavorite={onToggleFavorite}
+            onRemove={onRemove}
+            onClear={onClear}
+            isOpen={true}
+            onClose={() => {}}
+            embedded
+          />
+        )}
       </div>
     </div>
   );

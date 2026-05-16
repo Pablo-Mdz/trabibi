@@ -1,19 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
-const QUICK_PHRASES = [
-  { label: 'Hola', emoji: '👋' },
-  { label: 'Gracias', emoji: '🙏' },
-  { label: '¿Cuánto cuesta?', emoji: '💰' },
-  { label: '¿Dónde está el baño?', emoji: '🚽' },
-  { label: 'Por favor', emoji: '🤲' },
-  { label: 'No entiendo', emoji: '🤷' },
-  { label: 'Agua, por favor', emoji: '💧' },
-  { label: 'La cuenta, por favor', emoji: '🧾' },
-  { label: 'Muy delicioso', emoji: '😋' },
-  { label: 'Llama a la policía', emoji: '🚨' },
-];
-
 export default function TranslatorInput({ onTranslate, isLoading, mode }) {
   const [text, setText] = useState('');
   const [inputLang, setInputLang] = useState('es-ES');
@@ -48,24 +35,6 @@ export default function TranslatorInput({ onTranslate, isLoading, mode }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Quick phrases */}
-      {mode === 'translate' && (
-        <div>
-          <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Frases rápidas</p>
-          <div className="flex flex-wrap gap-2">
-            {QUICK_PHRASES.map(({ label, emoji }) => (
-              <button
-                key={label}
-                onClick={() => handleQuickPhrase(label)}
-                className="px-3 py-1.5 rounded-full bg-surface border border-white/10 text-sm text-gray-300 hover:border-gold/50 hover:text-gold transition-all duration-150 flex items-center gap-1.5"
-              >
-                <span>{emoji}</span>
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Input area */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">

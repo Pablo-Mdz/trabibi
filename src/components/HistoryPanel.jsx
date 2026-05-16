@@ -12,7 +12,7 @@ const CATEGORY_LABELS = {
   other: 'Otros',
 };
 
-export default function HistoryPanel({ history, onSelect, onToggleFavorite, onRemove, onClear, isOpen, onClose }) {
+export default function HistoryPanel({ history, onSelect, onToggleFavorite, onRemove, onClear, isOpen, onClose, embedded = false }) {
   const [filterCategory, setFilterCategory] = useState('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
@@ -21,6 +21,10 @@ export default function HistoryPanel({ history, onSelect, onToggleFavorite, onRe
     if (filterCategory !== 'all' && e.category !== filterCategory) return false;
     return true;
   });
+
+  if (embedded) {
+    return <HistoryContent filtered={filtered} history={history} onSelect={onSelect} onToggleFavorite={onToggleFavorite} onRemove={onRemove} onClear={onClear} filterCategory={filterCategory} setFilterCategory={setFilterCategory} showFavoritesOnly={showFavoritesOnly} setShowFavoritesOnly={setShowFavoritesOnly} onClose={onClose} />;
+  }
 
   return (
     <>
@@ -109,6 +113,74 @@ export default function HistoryPanel({ history, onSelect, onToggleFavorite, onRe
         </div>
       </div>
     </>
+  );
+}
+
+function HistoryContent({ filtered, history, onSelect, onToggleFavorite, onRemove, onClear, filterCategory, setFilterCategory, showFavoritesOnly, setShowFavoritesOnly, onClose }) {
+  return (
+    <div className="flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between py-2 mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-white font-semibold text-sm">Historial</span>
+          <span className="text-xs text-gray-500">{history.length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={`p-1.5 rounded-full transition-all text-lg ${showFavoritesOnly ? 'text-gold' : 'text-gray-600 hover:text-gray-400'}`}
+            title="Solo favoritos"
+          >
+            {showFavoritesOnly ? '★' : '☆'}
+          </button>
+          {history.length > 0 && (
+            <button
+              onClick={() => { if (confirm('¿Limpiar todo el historial?')) onClear(); }}
+              className="text-xs text-gray-600 hover:text-red-400 transition-colors px-2 py-1"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Category filters */}
+      <div className="flex gap-1.5 pb-3 overflow-x-auto scrollbar-hide">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setFilterCategory(cat)}
+            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap transition-all flex-shrink-0 ${
+              filterCategory === cat
+                ? 'bg-gold/20 text-gold border border-gold/30'
+                : 'bg-surface text-gray-500 border border-white/10 hover:text-gray-300'
+            }`}
+          >
+            {CATEGORY_LABELS[cat]}
+          </button>
+        ))}
+      </div>
+
+      {/* Entries */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-32 text-gray-600 text-sm gap-2">
+          <span className="text-2xl">📭</span>
+          {history.length === 0 ? 'Guardá traducciones aquí' : 'Sin resultados'}
+        </div>
+      ) : (
+        <div className="divide-y divide-white/5">
+          {filtered.map((entry) => (
+            <HistoryEntry
+              key={entry.id}
+              entry={entry}
+              onSelect={() => onSelect(entry)}
+              onToggleFavorite={() => onToggleFavorite(entry.id)}
+              onRemove={() => onRemove(entry.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
