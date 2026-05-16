@@ -9,20 +9,25 @@ export default function TranslatorInput({ onTranslate, isLoading, mode }) {
 
   const micLang = mode === 'response' ? 'ar-EG' : inputLang;
 
+  // Clear text when switching modes
   useEffect(() => {
-    if (transcript) {
-      setText(transcript);
+    setText('');
+  }, [mode]);
+
+  // When mic returns a transcript:
+  // - always populate the text field
+  // - in response mode, auto-submit immediately (no extra button tap needed)
+  useEffect(() => {
+    if (!transcript) return;
+    setText(transcript);
+    if (mode === 'response') {
+      onTranslate(transcript);
     }
-  }, [transcript]);
+  }, [transcript]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = (e) => {
     e?.preventDefault();
-    if (text.trim()) onTranslate(text.trim());
-  };
-
-  const handleQuickPhrase = (phrase) => {
-    setText(phrase);
-    onTranslate(phrase);
+    if (text.trim() && !isLoading) onTranslate(text.trim());
   };
 
   const handleMicClick = () => {
@@ -35,35 +40,44 @@ export default function TranslatorInput({ onTranslate, isLoading, mode }) {
 
   return (
     <div className="flex flex-col gap-4">
-
-      {/* Input area */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        {mode === 'response' ? (
-          <div className="bg-surface border border-teal/30 rounded-2xl p-4 text-center">
-            <p className="text-gray-400 text-sm mb-1">Modo Respuesta activo</p>
-            <p className="text-teal text-xs">
-              Presioná el micrófono y hablá en árabe — te digo qué dijo en español
-            </p>
-            {transcript && (
-              <p className="mt-3 text-white font-arabic text-right text-lg leading-relaxed">
-                {transcript}
+
+        {/* Translate mode: plain textarea */}
+        {mode === 'translate' && (
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+            placeholder="Escribí en español o inglés..."
+            rows={3}
+            className="w-full bg-surface border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gold/50 resize-none text-base"
+          />
+        )}
+
+        {/* Response mode: mic-first + text fallback */}
+        {mode === 'response' && (
+          <div className="bg-surface border border-teal/30 rounded-2xl p-4 flex flex-col gap-3">
+            <div className="text-center">
+              <p className="text-teal text-sm font-medium">👂 Modo Respuesta</p>
+              <p className="text-gray-500 text-xs mt-0.5">
+                Presioná el micrófono y hablá en árabe, o escribilo abajo
               </p>
-            )}
-          </div>
-        ) : (
-          <div className="relative">
+            </div>
+
+            {/* Text area for typing Arabic manually (fallback) */}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-              placeholder="Escribí en español o inglés..."
-              rows={3}
-              className="w-full bg-surface border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-gold/50 resize-none text-base"
+              placeholder="أو escribí el árabe acá..."
+              rows={2}
+              dir="auto"
+              className="w-full bg-darkbg border border-teal/20 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-teal/50 resize-none text-base font-arabic text-right"
+              style={{ fontFamily: "'Noto Sans Arabic', sans-serif" }}
             />
           </div>
         )}
@@ -101,6 +115,8 @@ export default function TranslatorInput({ onTranslate, isLoading, mode }) {
               className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-200 flex-shrink-0 ${
                 isListening
                   ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse'
+                  : mode === 'response'
+                  ? 'bg-teal/10 border-teal text-teal hover:bg-teal/20'
                   : 'bg-surface border-white/20 text-gray-400 hover:border-gold/50 hover:text-gold'
               }`}
               title={isListening ? 'Detener grabación' : `Hablar en ${micLang === 'ar-EG' ? 'árabe' : micLang === 'es-ES' ? 'español' : 'inglés'}`}
@@ -133,14 +149,21 @@ export default function TranslatorInput({ onTranslate, isLoading, mode }) {
             </button>
           )}
 
-          {/* Response mode: translate button */}
-          {mode === 'response' && transcript && (
+          {/* Response mode: manual submit (for typed Arabic) */}
+          {mode === 'response' && (
             <button
               type="submit"
-              disabled={isLoading}
-              className="flex-1 py-3 rounded-full font-semibold text-white bg-teal hover:bg-teal/80 transition-all duration-200 disabled:opacity-40"
+              disabled={!text.trim() || isLoading}
+              className="flex-1 py-3 rounded-full font-semibold text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-teal hover:bg-teal/80 active:scale-95"
             >
-              {isLoading ? 'Traduciendo...' : '¿Qué dijo? →'}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Traduciendo...
+                </span>
+              ) : (
+                '¿Qué dijo? →'
+              )}
             </button>
           )}
         </div>
