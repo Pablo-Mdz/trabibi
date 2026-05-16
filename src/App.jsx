@@ -4,6 +4,7 @@ import TranslationCard from './components/TranslationCard';
 import HistoryPanel from './components/HistoryPanel';
 import ModeToggle from './components/ModeToggle';
 import PhrasesPanel from './components/PhrasesPanel';
+import ConversationMode from './components/ConversationMode';
 import { translateToArabic, translateFromArabic } from './services/claudeApi';
 import { useHistory } from './hooks/useHistory';
 
@@ -126,32 +127,41 @@ export default function App() {
           <ModeToggle mode={mode} onChange={handleModeChange} />
         </div>
 
-        {/* Input */}
-        <TranslatorInput
-          onTranslate={handleTranslate}
-          isLoading={isLoading}
-          mode={mode}
-        />
-
-        {/* Error */}
-        {error && (
-          <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-red-400 text-sm">
-            {error}
+        {/* Conversation mode — full-screen chat UI */}
+        {mode === 'convo' ? (
+          <div className="flex-1 flex flex-col bg-surface border border-purple-500/20 rounded-3xl overflow-hidden" style={{ minHeight: '60vh' }}>
+            <ConversationMode />
           </div>
-        )}
+        ) : (
+          <>
+            {/* Input */}
+            <TranslatorInput
+              onTranslate={handleTranslate}
+              isLoading={isLoading}
+              mode={mode}
+            />
 
-        {/* Loading skeleton */}
-        {isLoading && (
-          <div className="mt-6 bg-surface border border-white/10 rounded-3xl p-6 flex flex-col gap-4 animate-pulse">
-            <div className="h-4 bg-white/10 rounded-full w-3/4" />
-            <div className="h-12 bg-gold/10 rounded-2xl" />
-            <div className="h-8 bg-white/10 rounded-full w-1/2 mx-auto" />
-            <div className="h-4 bg-white/10 rounded-full w-2/3 mx-auto" />
-          </div>
+            {/* Error */}
+            {error && (
+              <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Loading skeleton */}
+            {isLoading && (
+              <div className="mt-6 bg-surface border border-white/10 rounded-3xl p-6 flex flex-col gap-4 animate-pulse">
+                <div className="h-4 bg-white/10 rounded-full w-3/4" />
+                <div className="h-12 bg-gold/10 rounded-2xl" />
+                <div className="h-8 bg-white/10 rounded-full w-1/2 mx-auto" />
+                <div className="h-4 bg-white/10 rounded-full w-2/3 mx-auto" />
+              </div>
+            )}
+          </>
         )}
 
         {/* Translation result */}
-        {!isLoading && currentResult && (
+        {mode !== 'convo' && !isLoading && currentResult && (
           <div className="mt-6">
             <TranslationCard
               result={currentResult}
@@ -163,8 +173,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Mobile: inline bottom panel (frases + historial) */}
-        {mobileBottomOpen && (
+        {/* Mobile: inline bottom panel (frases + historial) — hidden in convo mode */}
+        {mobileBottomOpen && mode !== 'convo' && (
           <div className="mt-6 lg:hidden">
             <BottomPanel
               activeTab={activeTab}
